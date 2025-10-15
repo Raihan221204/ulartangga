@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Ular Tangga - Realtime (Firebase) - 16 Tim</title>
+  <style>
+    :root{--board-gap:12px}
+    html,body{height:100%;margin:0}
+    body{display:flex;align-items:center;justify-content:center;background:#0f1724;color:#fff;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
+    .stage{width:100vw;height:100vh;display:flex;align-items:center;justify-content:center;padding:12px;box-sizing:border-box}
+    .board-wrap{position:relative;max-width:calc(100vmin - var(--board-gap));max-height:calc(100vmin - var(--board-gap));width:100%;height:100%;display:block}
+    #board{
+      width:100%;height:100%;background-image:url('board.jpeg');background-size:contain;background-repeat:no-repeat;background-position:center center;border-radius:6px;box-shadow:0 10px 40px rgba(2,6,23,0.6);position:relative;overflow:visible}
+    .grid{position:absolute;left:0;top:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(10,1fr);grid-template-rows:repeat(10,1fr);pointer-events:none}
+    .cell{border:0;box-sizing:border-box}
+    #players-container{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none}
+    .player{position:absolute;width:calc(6%);height:calc(6%);min-width:18px;min-height:18px;border-radius:50%;border:2px solid #fff;box-shadow:0 4px 10px rgba(2,6,23,0.6);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#fff;transform:translate(-50%,-50%);transition:transform 450ms cubic-bezier(.2,.9,.25,1), left 450ms ease, top 450ms ease}
+    .controls{position:fixed;right:18px;top:18px;background:rgba(255,255,255,0.06);backdrop-filter:blur(6px);padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);width:360px;color:#e6eef8;max-height:92vh;overflow:auto}
+    .controls h3{margin:0 0 8px 0;font-size:16px}
+    .controls label{display:block;font-size:13px;margin-bottom:6px}
+    .controls select,input{width:100%;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.08);background:rgba(0,0,0,0.2);color:#fff}
+    .row{display:flex;gap:8px}
+    button{padding:8px 10px;border-radius:8px;border:0;background:#06b6d4;color:#04293a;font-weight:600;cursor:pointer}
+    button.secondary{background:transparent;border:1px solid rgba(255,255,255,0.06);color:#e6eef8}
+    .danger{background:#ef4444;color:#fff}
+    .info{font-size:13px;margin-top:8px}
+    .players-list{max-height:160px;overflow:auto;margin-top:8px}
+    .player-status{display:flex;justify-content:space-between;padding:6px 8px;border-radius:6px;background:rgba(255,255,255,0.02);margin-bottom:6px;font-size:13px}
+    .auth{margin-bottom:8px}
+    .small{font-size:12px;color:rgba(255,255,255,0.7)}
+    @media (max-width:700px){
+      .controls{position:fixed;left:12px;right:12px;bottom:12px;top:auto;width:auto}
+      .player{font-size:10px}
+    }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <div class="board-wrap">
+      <div id="board" aria-label="Papan Ular Tangga">
+        <div class="grid" id="grid"></div>
+        <div id="players-container"></div>
+      </div>
+    </div>
+
+    <div class="controls" role="region" aria-label="Kontrol permainan">
+      <div class="auth" id="auth-area">
+        <div><strong id="user-info">Belum login (viewer)</strong></div>
+        <div style="margin-top:6px">
+          <input id="email" type="email" placeholder="email" style="margin-bottom:6px;padding:8px;border-radius:6px;width:100%" />
+          <input id="password" type="password" placeholder="password" style="margin-bottom:6px;padding:8px;border-radius:6px;width:100%" />
+          <div class="row">
+            <button id="btn-login">Login</button>
+            <button class="secondary" id="btn-logout" style="display:none">Logout</button>
+          </div>
+        </div>
+      </div>
+
+      <h3>Kontrol Game (16 Tim)</h3>
+
+      <label>Pilih Tim aktif:
+        <select id="select-player"></select>
+      </label>
+      <label>Jumlah lemparan:
+        <input id="input-rolls" type="number" min="1" value="1" />
+      </label>
+      <div class="row" style="margin-top:8px">
+        <button id="set-turn" disabled>Set Giliran</button>
+        <button class="secondary" id="dice-roll-button" disabled>Goyang Dadu</button>
+      </div>
+
+      <hr style="border:none;height:8px"/>
+
+      <!-- Manual move (admin only) -->
+      <div id="manual-move-section" style="display:none">
+        <div class="small" style="margin-bottom:6px">Manual: pindahkan pion (admin)</div>
+        <label>Pilih Tim untuk pindah:
+          <select id="move-player"></select>
+        </label>
+        <label>Tujuan petak (1 - 100):
+          <input id="move-target" type="number" min="1" max="100" value="1" />
+        </label>
+        <div class="row" style="margin-top:8px">
+          <button id="btn-move">Move</button>
+          <button class="secondary" id="btn-move-center" title="kembalikan ke kotak 1">Reset posisi tim terpilih</button>
+        </div>
+      </div>
+
+      <hr style="border:none;height:8px"/>
+
+      <!-- Reset (admin only) -->
+      <div id="reset-section" style="display:none">
+        <div class="small" style="margin-bottom:6px">Aksi admin: reset game</div>
+        <button id="btn-reset" class="danger">Reset Game (semua data dihapus)</button>
+      </div>
+
+      <div class="info" style="margin-top:12px">
+        <div id="dice-result">Hasil dadu: -</div>
+        <div id="current-player">Tim aktif: -</div>
+        <div id="rolls-left">Sisa lemparan: 0</div>
+      </div>
+
+      <div class="players-list" id="players-status"></div>
+
+      <div style="margin-top:8px;font-size:12px;color:rgba(255,255,255,0.7)">
+        Tips: letakkan file gambar papan <strong>board.jpeg</strong> di folder yang sama dengan file .html lalu buka file .html di browser.
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase v9 modular via CDN -->
+  <script type="module">
+    // ========== masukkan firebaseConfig kamu ==========
+    const firebaseConfig = {
+      apiKey: "AIzaSyCkMCtgyRGnP79OMt7E5O_Vd1CqHXhugbY",
+      authDomain: "ulartangga-e8151.firebaseapp.com",
+      databaseURL: "https://ulartangga-e8151-default-rtdb.firebaseio.com",
+      projectId: "ulartangga-e8151",
+      storageBucket: "ulartangga-e8151.firebasestorage.app",
+      messagingSenderId: "414813226733",
+      appId: "1:414813226733:web:2b3b770fe315b13acb2ee4",
+      measurementId: "G-EN7VY6P94Z"
+    };
+
+    // daftar admin (boleh tambah email lain jika perlu)
+    const ADMIN_EMAILS = ['adminouting@gmail.com'];
+
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import { getDatabase, ref, set, onValue, update, get } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+
+    // ---------- Game config ----------
+    const totalPlayers = 16;
+    const ladders = {2:38,7:14,15:26,21:42,28:84,36:44,51:67,71:91,78:98,87:94};
+    const snakes  = {16:6,46:25,49:11,62:19,64:60,74:53,89:68,92:88,95:75,99:80};
+    const playerColors = ['#FF5733','#33FF57','#3357FF','#FF33A1','#A133FF','#33FFA1','#FFC300','#C70039','#900C3F','#581845','#00FFFF','#FF00FF','#0000FF','#00FF00','#FFFF00','#000000'];
+
+    // UI refs
+    const board = document.getElementById('board');
+    const grid = document.getElementById('grid');
+    const playersContainer = document.getElementById('players-container');
+    const selectPlayer = document.getElementById('select-player');
+    const inputRolls = document.getElementById('input-rolls');
+    const setTurnBtn = document.getElementById('set-turn');
+    const diceBtn = document.getElementById('dice-roll-button');
+    const diceResult = document.getElementById('dice-result');
+    const currentPlayerDisplay = document.getElementById('current-player');
+    const rollsLeftDisplay = document.getElementById('rolls-left');
+    const playersStatus = document.getElementById('players-status');
+
+    // auth ui
+    const emailInput = document.getElementById('email');
+    const passInput = document.getElementById('password');
+    const btnLogin = document.getElementById('btn-login');
+    const btnLogout = document.getElementById('btn-logout');
+    const userInfo = document.getElementById('user-info');
+
+    // manual move ui
+    const manualSection = document.getElementById('manual-move-section');
+    const movePlayer = document.getElementById('move-player');
+    const moveTarget = document.getElementById('move-target');
+    const btnMove = document.getElementById('btn-move');
+    const btnMoveCenter = document.getElementById('btn-move-center');
+
+    // reset ui
+    const resetSection = document.getElementById('reset-section');
+    const btnReset = document.getElementById('btn-reset');
+
+    // ---------- UI init ----------
+    function createGridCells(){ grid.innerHTML=''; for(let i=0;i<100;i++){ const cell=document.createElement('div'); cell.className='cell'; cell.dataset.index=i+1; grid.appendChild(cell);} }
+    function createPlayers(){ playersContainer.innerHTML=''; for(let i=0;i<totalPlayers;i++){ const p=document.createElement('div'); p.className='player'; p.id=`player-${i+1}`; p.style.backgroundColor=playerColors[i]; p.innerText=i+1; playersContainer.appendChild(p);} }
+    function populateSelects(){
+      selectPlayer.innerHTML=''; movePlayer.innerHTML='';
+      for(let i=1;i<=totalPlayers;i++){
+        const o=document.createElement('option'); o.value=i; o.innerText=`Tim ${i}`; selectPlayer.appendChild(o);
+        const m=document.createElement('option'); m.value=i; m.innerText=`Tim ${i}`; movePlayer.appendChild(m);
+      }
+    }
+
+    function computeCellCenters(){
+      const cells = Array.from(grid.children);
+      const centers = {};
+      for(let num=1; num<=100; num++){
+        const row = Math.floor((num-1)/10);
+        const fromBottom = row;
+        const topRowIndex = 9 - fromBottom;
+        const inRowIndex = (num-1) % 10;
+        const leftToRight = ((fromBottom) % 2 === 0);
+        const col = leftToRight ? inRowIndex : (9 - inRowIndex);
+        const domIndex = topRowIndex * 10 + col;
+        const cell = cells[domIndex];
+        if(cell){
+          const rect = cell.getBoundingClientRect();
+          const boardRect = board.getBoundingClientRect();
+          const cx = (rect.left + rect.right)/2 - boardRect.left;
+          const cy = (rect.top + rect.bottom)/2 - boardRect.top;
+          centers[num] = {x: cx/boardRect.width, y: cy/boardRect.height};
+        }
+      }
+      return centers;
+    }
+
+    function updatePlayerElement(playerId, centers, pos){
+      const el = document.getElementById(`player-${playerId}`);
+      const c = centers[pos];
+      if(!c) return;
+      el.style.left = (c.x * 100) + '%';
+      el.style.top = (c.y * 100) + '%';
+    }
+
+    function renderPlayersStatus(playerPositions){
+      playersStatus.innerHTML='';
+      for(let i=1;i<=totalPlayers;i++){
+        const d=document.createElement('div'); d.className='player-status';
+        d.innerHTML = `<div style="display:flex;gap:8px;align-items:center"><span style="width:14px;height:14px;border-radius:50%;background:${playerColors[i-1]};display:inline-block;border:2px solid #fff"></span><strong>Tim ${i}</strong></div><div>Petak ${playerPositions[i]||1}</div>`;
+        playersStatus.appendChild(d);
+      }
+    }
+
+    // ---------- DB helpers ----------
+    async function getGameOnce(){ const snap = await get(ref(db,'game')); return snap.exists() ? snap.val() : null; }
+
+    // admin operations
+    async function adminSetTurn(playerId, numberOfRolls){
+      await update(ref(db,'game'), {
+        activePlayerId: playerId,
+        rollsLeft: numberOfRolls,
+        lastEvent: `Giliran Tim ${playerId}`,
+        updatedAt: Date.now()
+      });
+    }
+
+    async function adminRollDice(){
+      const snap = await get(ref(db,'game'));
+      const state = snap.exists() ? snap.val() : {};
+      const positions = state.playerPositions || Object.fromEntries(Array.from({length:totalPlayers},(_,i)=>[i+1,1]));
+      let active = state.activePlayerId || 1;
+      let rollsLeft = state.rollsLeft || 1;
+      if(rollsLeft <= 0) return;
+
+      const r = Math.floor(Math.random()*6)+1;
+      let cur = Number(positions[active]) || 1;
+      let next = cur + r;
+      if(next>100) next = 100;
+      positions[active] = next;
+
+      let eventText = `Hasil dadu: ${r}`;
+      if(ladders[next]){ positions[active] = ladders[next]; eventText += ` 🪜 Naik ke ${ladders[next]}`; }
+      else if(snakes[next]){ positions[active] = snakes[next]; eventText += ` 🐍 Turun ke ${snakes[next]}`; }
+
+      // capture
+      const landed = positions[active];
+      for(let i=1;i<=totalPlayers;i++){
+        if(i===Number(active)) continue;
+        if(Number(positions[i]) === Number(landed)){
+          positions[i] = 1;
+          eventText += ` | Tim ${active} capture Tim ${i}`;
+        }
+      }
+
+      rollsLeft = Math.max(0, rollsLeft - 1);
+
+      await set(ref(db,'game'), {
+        playerPositions: positions,
+        activePlayerId: state.activePlayerId || active,
+        rollsLeft,
+        lastDice: r,
+        lastEvent: eventText,
+        updatedAt: Date.now()
+      });
+    }
+
+    // manual move: pindahkan satu tim ke petak tertentu
+    async function adminMovePlayer(teamId, targetSquare){
+      if(teamId < 1 || teamId > totalPlayers) throw new Error('Tim invalid');
+      if(targetSquare < 1 || targetSquare > 100) throw new Error('Petak invalid');
+      const snap = await get(ref(db,'game'));
+      const state = snap.exists() ? snap.val() : {};
+      const positions = state.playerPositions || Object.fromEntries(Array.from({length:totalPlayers},(_,i)=>[i+1,1]));
+      positions[teamId] = targetSquare;
+      const eventText = `Admin memindah Tim ${teamId} → ${targetSquare}`;
+      await update(ref(db,'game'), {
+        playerPositions: positions,
+        lastEvent: eventText,
+        updatedAt: Date.now()
+      });
+    }
+
+    // reset game (semua data kembali)
+    async function adminResetGame(){
+      const defaultPositions = Object.fromEntries(Array.from({length:totalPlayers},(_,i)=>[i+1,1]));
+      await set(ref(db,'game'), {
+        playerPositions: defaultPositions,
+        activePlayerId: null,
+        rollsLeft: 0,
+        lastDice: null,
+        lastEvent: 'Game di-reset oleh admin',
+        updatedAt: Date.now()
+      });
+    }
+
+    // ---------- realtime listener ----------
+    function attachListeners(){
+      onValue(ref(db,'game'), (snap)=>{
+        const state = snap.exists() ? snap.val() : {};
+        const p = state.playerPositions || {};
+        const active = state.activePlayerId || null;
+        const rollsLeft = state.rollsLeft || 0;
+        diceResult.innerText = state.lastEvent || 'Hasil dadu: -';
+        currentPlayerDisplay.innerText = active ? `Tim ${active}` : 'Tim aktif: -';
+        rollsLeftDisplay.innerText = rollsLeft;
+        requestAnimationFrame(()=>{
+          const centers = computeCellCenters();
+          for(let i=1;i<=totalPlayers;i++){
+            updatePlayerElement(i, centers, Number(p[i]||1));
+          }
+        });
+        renderPlayersStatus(p);
+      });
+    }
+
+    // ---------- auth handlers ----------
+    btnLogin.addEventListener('click', async ()=>{
+      const email = emailInput.value.trim();
+      const pass = passInput.value;
+      if(!email || !pass){ alert('Isi email & password'); return; }
+      try{
+        await signInWithEmailAndPassword(auth, email, pass);
+      }catch(err){
+        alert('Login gagal: ' + err.message);
+      }
+    });
+    btnLogout.addEventListener('click', async ()=>{ await signOut(auth); });
+
+    onAuthStateChanged(auth, async (user)=>{
+      if(user){
+        userInfo.innerText = `Login: ${user.email}`;
+        emailInput.style.display = 'none';
+        passInput.style.display = 'none';
+        btnLogin.style.display = 'none';
+        btnLogout.style.display = 'inline-block';
+        // enable admin-only UI for whitelisted emails
+        if(ADMIN_EMAILS.includes(user.email)){
+          setTurnBtn.disabled = false;
+          diceBtn.disabled = false;
+          manualSection.style.display = 'block';
+          resetSection.style.display = 'block';
+        } else {
+          setTurnBtn.disabled = true;
+          diceBtn.disabled = true;
+          manualSection.style.display = 'none';
+          resetSection.style.display = 'none';
+        }
+      } else {
+        userInfo.innerText = 'Belum login (viewer)';
+        emailInput.style.display = 'block';
+        passInput.style.display = 'block';
+        btnLogin.style.display = 'inline-block';
+        btnLogout.style.display = 'none';
+        setTurnBtn.disabled = true;
+        diceBtn.disabled = true;
+        manualSection.style.display = 'none';
+        resetSection.style.display = 'none';
+      }
+    });
+
+    // wire admin buttons
+    setTurnBtn.addEventListener('click', async ()=>{
+      const pid = Number(selectPlayer.value);
+      const n = Number(inputRolls.value) || 1;
+      try{ await adminSetTurn(pid,n); }catch(err){ alert('Gagal set giliran: '+err.message); }
+    });
+    diceBtn.addEventListener('click', async ()=>{
+      try{ await adminRollDice(); }catch(err){ alert('Gagal roll dadu: '+err.message); }
+    });
+
+    btnMove.addEventListener('click', async ()=>{
+      const t = Number(movePlayer.value);
+      const target = Number(moveTarget.value);
+      if(!confirm(`Pindahkan Tim ${t} ke petak ${target}?`)) return;
+      try{
+        await adminMovePlayer(t, target);
+        alert('Berhasil memindahkan.');
+      }catch(err){ alert('Gagal memindahkan: '+err.message); }
+    });
+    btnMoveCenter.addEventListener('click', async ()=>{
+      const t = Number(movePlayer.value);
+      if(!confirm(`Kembalikan Tim ${t} ke kotak 1?`)) return;
+      try{ await adminMovePlayer(t, 1); alert('Berhasil kembalikan.'); }catch(err){ alert('Gagal: '+err.message); }
+    });
+
+    btnReset.addEventListener('click', async ()=>{
+      if(!confirm('Yakin reset seluruh game? (semua posisi akan kembali & riwayat event akan hilang)')) return;
+      try{ await adminResetGame(); alert('Game berhasil di-reset.'); }catch(err){ alert('Gagal reset: '+err.message); }
+    });
+
+    // ---------- init ----------
+    async function init(){
+      createGridCells();
+      createPlayers();
+      populateSelects();
+      attachListeners();
+
+      // If DB empty, initialize only when admin logged in
+      const s = await getGameOnce();
+      if(!s){
+        onAuthStateChanged(auth, async (user)=>{
+          if(user && ADMIN_EMAILS.includes(user.email)){
+            const defaultPositions = Object.fromEntries(Array.from({length:totalPlayers},(_,i)=>[i+1,1]));
+            await set(ref(db,'game'), {
+              playerPositions: defaultPositions,
+              activePlayerId: null,
+              rollsLeft: 0,
+              lastEvent: 'Game diinisialisasi',
+              updatedAt: Date.now()
+            });
+          }
+        });
+      }
+
+      // reposition on resize
+      window.addEventListener('resize', ()=>{ requestAnimationFrame(()=>{ const centers = computeCellCenters(); getGameOnce().then(state => { const p = (state && state.playerPositions) || {}; for(let i=1;i<=totalPlayers;i++){ updatePlayerElement(i, centers, Number(p[i]||1)); } }) })});
+    }
+    init();
+  </script>
+</body>
+</html>

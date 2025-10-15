@@ -3,115 +3,196 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Ular Tangga - Realtime (Firebase) - 16 Tim</title>
+  <title>Ular Tangga - Final (Viewer Info + Animasi)</title>
   <style>
     :root{--board-gap:12px}
-    html,body{height:100%;margin:0}
-    body{display:flex;align-items:center;justify-content:center;background:#0f1724;color:#fff;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
-    .stage{width:100vw;height:100vh;display:flex;align-items:center;justify-content:center;padding:12px;box-sizing:border-box}
+    html,body{height:100%;margin:0;overflow:hidden}
+    body{
+      display:flex;align-items:center;justify-content:center;
+      background:#0f1724;color:#fff;
+      font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      position:relative;
+    }
+
+    .stage{width:100vw;height:100vh;display:flex;align-items:center;justify-content:center;padding:12px;box-sizing:border-box;position:relative;z-index:1}
     .board-wrap{position:relative;max-width:calc(100vmin - var(--board-gap));max-height:calc(100vmin - var(--board-gap));width:100%;height:100%;display:block}
-    #board{
-      width:100%;height:100%;background-image:url('board.jpeg');background-size:contain;background-repeat:no-repeat;background-position:center center;border-radius:6px;box-shadow:0 10px 40px rgba(2,6,23,0.6);position:relative;overflow:visible}
+    #board{width:100%;height:100%;background-image:url('board.jpeg');background-size:contain;background-repeat:no-repeat;background-position:center center;border-radius:6px;box-shadow:0 10px 40px rgba(2,6,23,0.6);position:relative;overflow:visible}
     .grid{position:absolute;left:0;top:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(10,1fr);grid-template-rows:repeat(10,1fr);pointer-events:none}
     .cell{border:0;box-sizing:border-box}
     #players-container{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none}
-    .player{position:absolute;width:calc(6%);height:calc(6%);min-width:18px;min-height:18px;border-radius:50%;border:2px solid #fff;box-shadow:0 4px 10px rgba(2,6,23,0.6);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#fff;transform:translate(-50%,-50%);transition:transform 450ms cubic-bezier(.2,.9,.25,1), left 450ms ease, top 450ms ease}
-    .controls{position:fixed;right:18px;top:18px;background:rgba(255,255,255,0.06);backdrop-filter:blur(6px);padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);width:360px;color:#e6eef8;max-height:92vh;overflow:auto}
-    .controls h3{margin:0 0 8px 0;font-size:16px}
-    .controls label{display:block;font-size:13px;margin-bottom:6px}
-    .controls select,input{width:100%;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.08);background:rgba(0,0,0,0.2);color:#fff}
-    .row{display:flex;gap:8px}
-    button{padding:8px 10px;border-radius:8px;border:0;background:#06b6d4;color:#04293a;font-weight:600;cursor:pointer}
-    button.secondary{background:transparent;border:1px solid rgba(255,255,255,0.06);color:#e6eef8}
-    .danger{background:#ef4444;color:#fff}
-    .info{font-size:13px;margin-top:8px}
-    .players-list{max-height:160px;overflow:auto;margin-top:8px}
-    .player-status{display:flex;justify-content:space-between;padding:6px 8px;border-radius:6px;background:rgba(255,255,255,0.02);margin-bottom:6px;font-size:13px}
-    .auth{margin-bottom:8px}
-    .small{font-size:12px;color:rgba(255,255,255,0.7)}
-    @media (max-width:700px){
-      .controls{position:fixed;left:12px;right:12px;bottom:12px;top:auto;width:auto}
-      .player{font-size:10px}
+    .player{position:absolute;width:calc(6%);height:calc(6%);min-width:18px;min-height:18px;border-radius:50%;border:2px solid #fff;box-shadow:0 4px 10px rgba(2,6,23,0.6);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#fff;transform:translate(-50%,-50%);transition:left 300ms ease, top 300ms ease}
+
+    /* gear & logout */
+    .gear{ position:fixed; right:16px; bottom:16px; z-index:10050; width:56px; height:56px; border-radius:50%; background:#06b6d4; color:#04293a; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 30px rgba(0,0,0,0.5); cursor:pointer; font-size:20px; }
+    .gear.hidden{ display:none; }
+    .logout-btn{ position:fixed; right:16px; bottom:84px; z-index:10050; width:auto; padding:8px 12px; border-radius:10px; background:#fff; color:#071022; display:none; font-weight:700; box-shadow:0 8px 20px rgba(0,0,0,0.3); cursor:pointer; }
+
+    /* white card popup (settings) */
+    .settings-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,0.45); display:none; align-items:center; justify-content:center; z-index:10000; }
+    .settings-card{ width:360px; background:#ffffff; color:#071022; border-radius:12px; padding:16px; box-shadow:0 10px 40px rgba(2,6,23,0.6); box-sizing:border-box; max-height:90vh; overflow:auto; }
+    .settings-card h3{ margin:0 0 8px 0; font-size:18px; color:#071022 }
+    .settings-card label{ display:block; font-size:13px; margin-top:8px; color:#123 }
+    .settings-card input, .settings-card select { width:100%; padding:8px; border-radius:8px; border:1px solid #e5e7eb; box-sizing:border-box; margin-top:6px }
+    .settings-card .row{ display:flex; gap:8px; margin-top:10px }
+    .btn{ padding:8px 10px; border-radius:8px; border:0; cursor:pointer; background:#06b6d4; color:#04293a; font-weight:700 }
+    .btn.ghost{ background:transparent; border:1px solid #cbd5e1; color:#071022 }
+    .btn.danger{ background:#ef4444; color:#fff }
+    .small{ font-size:12px; color:#334155; margin-top:8px }
+
+    /* dice area inside card */
+    .dice-wrap{ display:flex; gap:12px; align-items:center; margin-top:10px }
+    .dice {
+      width:64px; height:64px; border-radius:8px; display:flex;align-items:center;justify-content:center;
+      font-weight:800; font-size:22px; background:#0f1724; color:#fff; box-shadow:0 6px 18px rgba(2,6,23,0.5);
+      transform-origin:center; transition:transform 600ms cubic-bezier(.2,.9,.25,1);
+    }
+    .dice.rolling {
+      animation: diceRoll 800ms cubic-bezier(.2,.7,.2,1);
+    }
+    @keyframes diceRoll {
+      0% { transform: rotate(0) scale(1); }
+      25% { transform: rotate(90deg) scale(1.05); }
+      50% { transform: rotate(180deg) scale(1.02); }
+      75% { transform: rotate(270deg) scale(1.06); }
+      100% { transform: rotate(360deg) scale(1); }
+    }
+
+    /* viewer info (positioning responsive) */
+    .viewer-info {
+      position:fixed;
+      left:50%;
+      transform:translateX(-50%);
+      bottom:12px;
+      z-index:10020;
+      background:rgba(2,6,23,0.75);
+      padding:10px 14px;
+      border-radius:10px;
+      font-size:14px;
+      display:flex;
+      gap:12px;
+      align-items:center;
+      box-shadow:0 8px 30px rgba(0,0,0,0.5);
+      pointer-events:none;
+    }
+    .viewer-info .item { display:flex; gap:6px; align-items:center; color:#e6eef8 }
+    .viewer-dice { width:28px; height:28px; border-radius:6px; background:#071022; display:flex;align-items:center;justify-content:center; font-weight:700; font-size:14px; color:#fff; }
+
+    /* desktop position: bottom-right */
+    @media (min-width:900px){
+      .viewer-info { left:auto; transform:none; right:18px; bottom:18px; }
+    }
+
+    @media (max-width:720px){
+      .settings-card{ width:92%; border-radius:10px; padding:12px }
+      .gear{ right:12px; bottom:12px; width:50px; height:50px; font-size:18px }
+      .logout-btn{ right:12px; bottom:74px; }
+      .player{ font-size:10px }
+      .viewer-info{ bottom:8px; padding:8px 10px; font-size:13px }
+      .viewer-dice{ width:24px; height:24px; font-size:12px }
     }
   </style>
 </head>
 <body>
-  <div class="stage">
+  <div class="stage" aria-hidden="false">
     <div class="board-wrap">
       <div id="board" aria-label="Papan Ular Tangga">
         <div class="grid" id="grid"></div>
         <div id="players-container"></div>
       </div>
     </div>
+  </div>
 
-    <div class="controls" role="region" aria-label="Kontrol permainan">
-      <div class="auth" id="auth-area">
-        <div><strong id="user-info">Belum login (viewer)</strong></div>
-        <div style="margin-top:6px">
-          <input id="email" type="email" placeholder="email" style="margin-bottom:6px;padding:8px;border-radius:6px;width:100%" />
-          <input id="password" type="password" placeholder="password" style="margin-bottom:6px;padding:8px;border-radius:6px;width:100%" />
-          <div class="row">
-            <button id="btn-login">Login</button>
-            <button class="secondary" id="btn-logout" style="display:none">Logout</button>
-          </div>
+  <!-- gear & logout (visible to admin after login) -->
+  <div id="gearBtn" class="gear hidden" title="Pengaturan (admin)">⚙️</div>
+  <div id="logoutBtn" class="logout-btn" title="Logout (admin)">Logout</div>
+
+  <!-- settings popup (white card) -->
+  <div id="settingsBackdrop" class="settings-backdrop" role="dialog" aria-modal="true">
+    <div class="settings-card" role="document">
+      <h3>Pengaturan Admin</h3>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="small" id="adminEmail">-</div>
+        <button id="closeSettings" class="btn ghost">Tutup</button>
+      </div>
+
+      <label>Pilih Tim aktif</label>
+      <select id="cfgSelectPlayer"></select>
+
+      <label>Jumlah lemparan</label>
+      <input id="cfgInputRolls" type="number" min="1" value="1" />
+
+      <div class="row">
+        <button id="cfgSetTurn" class="btn">Set Giliran</button>
+        <button id="cfgRollDice" class="btn">Goyang Dadu</button>
+      </div>
+
+      <div style="height:8px"></div>
+      <div class="dice-wrap">
+        <div class="dice" id="diceBox">-</div>
+        <div style="flex:1">
+          <div class="small" id="diceEvent">Hasil dadu: -</div>
+          <div class="small" id="cfgCurrentPlayer">Tim aktif: -</div>
         </div>
       </div>
 
-      <h3>Kontrol Game (16 Tim)</h3>
+      <hr style="margin:12px 0" />
 
-      <label>Pilih Tim aktif:
-        <select id="select-player"></select>
-      </label>
-      <label>Jumlah lemparan:
-        <input id="input-rolls" type="number" min="1" value="1" />
-      </label>
-      <div class="row" style="margin-top:8px">
-        <button id="set-turn" disabled>Set Giliran</button>
-        <button class="secondary" id="dice-roll-button" disabled>Goyang Dadu</button>
+      <label>Pindahkan Tim (manual)</label>
+      <select id="cfgMovePlayer"></select>
+      <label>Ke petak (1-100)</label>
+      <input id="cfgMoveTarget" type="number" min="1" max="100" value="1" />
+      <div class="row">
+        <button id="cfgMoveBtn" class="btn">Move</button>
+        <button id="cfgMoveReset" class="btn ghost">Reset Posisi</button>
       </div>
 
-      <hr style="border:none;height:8px"/>
+      <hr style="margin:12px 0" />
 
-      <!-- Manual move (admin only) -->
-      <div id="manual-move-section" style="display:none">
-        <div class="small" style="margin-bottom:6px">Manual: pindahkan pion (admin)</div>
-        <label>Pilih Tim untuk pindah:
-          <select id="move-player"></select>
-        </label>
-        <label>Tujuan petak (1 - 100):
-          <input id="move-target" type="number" min="1" max="100" value="1" />
-        </label>
-        <div class="row" style="margin-top:8px">
-          <button id="btn-move">Move</button>
-          <button class="secondary" id="btn-move-center" title="kembalikan ke kotak 1">Reset posisi tim terpilih</button>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="small">Reset seluruh game</div>
+        <button id="cfgReset" class="btn danger">Reset</button>
+      </div>
+
+      <div class="small" style="margin-top:10px;color:#475569">Catatan: tombol pengaturan & logout hanya muncul bila login sebagai admin. Viewer hanya melihat papan.</div>
+    </div>
+  </div>
+
+  <!-- viewer info -->
+  <div id="viewerInfo" class="viewer-info" aria-hidden="false">
+    <div class="item"><div class="viewer-dice" id="viewerDice">-</div></div>
+    <div class="item" id="viewerTurn">🎲 Giliran: -</div>
+    <div class="item" id="viewerRolls">🔁 Sisa: -</div>
+    <div class="item" id="viewerLast">🧮 Dadu: -</div>
+  </div>
+
+  <!-- role modal (viewer/admin choice + admin login) -->
+  <div id="roleModalBackdrop" class="settings-backdrop" style="z-index:10060; display:flex">
+    <div class="settings-card" style="width:320px">
+      <h3>Pilih peran</h3>
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button id="roleViewer" class="btn ghost" style="flex:1">Viewer</button>
+        <button id="roleAdmin" class="btn" style="flex:1">Admin</button>
+      </div>
+
+      <div id="adminForm" style="display:none;margin-top:12px">
+        <label>Email</label>
+        <input id="loginEmail" type="email" placeholder="adminouting@gmail.com" value="adminouting@gmail.com" />
+        <label>Password</label>
+        <input id="loginPass" type="password" placeholder="password" value="123456" />
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button id="loginBtn" class="btn">Login</button>
+          <button id="loginCancel" class="btn ghost">Batal</button>
         </div>
+        <div class="small" style="margin-top:8px;color:#475569">Gunakan akun admin untuk membuka pengaturan.</div>
       </div>
 
-      <hr style="border:none;height:8px"/>
-
-      <!-- Reset (admin only) -->
-      <div id="reset-section" style="display:none">
-        <div class="small" style="margin-bottom:6px">Aksi admin: reset game</div>
-        <button id="btn-reset" class="danger">Reset Game (semua data dihapus)</button>
-      </div>
-
-      <div class="info" style="margin-top:12px">
-        <div id="dice-result">Hasil dadu: -</div>
-        <div id="current-player">Tim aktif: -</div>
-        <div id="rolls-left">Sisa lemparan: 0</div>
-      </div>
-
-      <div class="players-list" id="players-status"></div>
-
-      <div style="margin-top:8px;font-size:12px;color:rgba(255,255,255,0.7)">
-        Tips: letakkan file gambar papan <strong>board.jpeg</strong> di folder yang sama dengan file .html lalu buka file .html di browser.
-      </div>
+      <div class="small" style="margin-top:12px;color:#475569">Viewer: langsung ke mode penonton (tanpa login).</div>
     </div>
   </div>
 
   <!-- Firebase v9 modular via CDN -->
   <script type="module">
-    // ========== masukkan firebaseConfig kamu ==========
+    // ========== firebaseConfig (isi dengan config projectmu) ==========
     const firebaseConfig = {
       apiKey: "AIzaSyCkMCtgyRGnP79OMt7E5O_Vd1CqHXhugbY",
       authDomain: "ulartangga-e8151.firebaseapp.com",
@@ -123,7 +204,7 @@
       measurementId: "G-EN7VY6P94Z"
     };
 
-    // daftar admin (boleh tambah email lain jika perlu)
+    // allowed admin emails
     const ADMIN_EMAILS = ['adminouting@gmail.com'];
 
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
@@ -136,49 +217,58 @@
 
     // ---------- Game config ----------
     const totalPlayers = 16;
-    const ladders = {2:38,7:14,15:26,21:42,28:84,36:44,51:67,71:91,78:98,87:94};
-    const snakes  = {16:6,46:25,49:11,62:19,64:60,74:53,89:68,92:88,95:75,99:80};
+    const ladders = {2:38,7:14,15:26,28:84,21:42,36:44,51:67,71:91,78:98,87:94};
+    const snakes  = {16:6,49:11,46:25,62:19,64:60,74:53,89:68,92:88,95:75,99:80};
     const playerColors = ['#FF5733','#33FF57','#3357FF','#FF33A1','#A133FF','#33FFA1','#FFC300','#C70039','#900C3F','#581845','#00FFFF','#FF00FF','#0000FF','#00FF00','#FFFF00','#000000'];
 
-    // UI refs
-    const board = document.getElementById('board');
+    // ---------- UI refs ----------
+    const gearBtn = document.getElementById('gearBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const settingsBackdrop = document.getElementById('settingsBackdrop');
+    const closeSettings = document.getElementById('closeSettings');
+    const adminEmailEl = document.getElementById('adminEmail');
+    const cfgSelectPlayer = document.getElementById('cfgSelectPlayer');
+    const cfgInputRolls = document.getElementById('cfgInputRolls');
+    const cfgSetTurn = document.getElementById('cfgSetTurn');
+    const cfgRollDice = document.getElementById('cfgRollDice');
+    const diceBox = document.getElementById('diceBox');
+    const diceEvent = document.getElementById('diceEvent');
+    const cfgCurrentPlayer = document.getElementById('cfgCurrentPlayer');
+    const cfgMovePlayer = document.getElementById('cfgMovePlayer');
+    const cfgMoveTarget = document.getElementById('cfgMoveTarget');
+    const cfgMoveBtn = document.getElementById('cfgMoveBtn');
+    const cfgMoveReset = document.getElementById('cfgMoveReset');
+    const cfgReset = document.getElementById('cfgReset');
+
+    const roleModalBackdrop = document.getElementById('roleModalBackdrop');
+    const roleViewer = document.getElementById('roleViewer');
+    const roleAdmin = document.getElementById('roleAdmin');
+    const adminForm = document.getElementById('adminForm');
+    const loginEmail = document.getElementById('loginEmail');
+    const loginPass = document.getElementById('loginPass');
+    const loginBtn = document.getElementById('loginBtn');
+    const loginCancel = document.getElementById('loginCancel');
+
+    // viewer info refs
+    const viewerInfo = document.getElementById('viewerInfo');
+    const viewerDice = document.getElementById('viewerDice');
+    const viewerTurn = document.getElementById('viewerTurn');
+    const viewerRolls = document.getElementById('viewerRolls');
+    const viewerLast = document.getElementById('viewerLast');
+
+    // board UI
     const grid = document.getElementById('grid');
+    const board = document.getElementById('board');
     const playersContainer = document.getElementById('players-container');
-    const selectPlayer = document.getElementById('select-player');
-    const inputRolls = document.getElementById('input-rolls');
-    const setTurnBtn = document.getElementById('set-turn');
-    const diceBtn = document.getElementById('dice-roll-button');
-    const diceResult = document.getElementById('dice-result');
-    const currentPlayerDisplay = document.getElementById('current-player');
-    const rollsLeftDisplay = document.getElementById('rolls-left');
-    const playersStatus = document.getElementById('players-status');
-
-    // auth ui
-    const emailInput = document.getElementById('email');
-    const passInput = document.getElementById('password');
-    const btnLogin = document.getElementById('btn-login');
-    const btnLogout = document.getElementById('btn-logout');
-    const userInfo = document.getElementById('user-info');
-
-    // manual move ui
-    const manualSection = document.getElementById('manual-move-section');
-    const movePlayer = document.getElementById('move-player');
-    const moveTarget = document.getElementById('move-target');
-    const btnMove = document.getElementById('btn-move');
-    const btnMoveCenter = document.getElementById('btn-move-center');
-
-    // reset ui
-    const resetSection = document.getElementById('reset-section');
-    const btnReset = document.getElementById('btn-reset');
 
     // ---------- UI init ----------
     function createGridCells(){ grid.innerHTML=''; for(let i=0;i<100;i++){ const cell=document.createElement('div'); cell.className='cell'; cell.dataset.index=i+1; grid.appendChild(cell);} }
     function createPlayers(){ playersContainer.innerHTML=''; for(let i=0;i<totalPlayers;i++){ const p=document.createElement('div'); p.className='player'; p.id=`player-${i+1}`; p.style.backgroundColor=playerColors[i]; p.innerText=i+1; playersContainer.appendChild(p);} }
     function populateSelects(){
-      selectPlayer.innerHTML=''; movePlayer.innerHTML='';
+      cfgSelectPlayer.innerHTML=''; cfgMovePlayer.innerHTML='';
       for(let i=1;i<=totalPlayers;i++){
-        const o=document.createElement('option'); o.value=i; o.innerText=`Tim ${i}`; selectPlayer.appendChild(o);
-        const m=document.createElement('option'); m.value=i; m.innerText=`Tim ${i}`; movePlayer.appendChild(m);
+        const o=document.createElement('option'); o.value=i; o.innerText=`Tim ${i}`; cfgSelectPlayer.appendChild(o);
+        const m=document.createElement('option'); m.value=i; m.innerText=`Tim ${i}`; cfgMovePlayer.appendChild(m);
       }
     }
 
@@ -205,7 +295,8 @@
       return centers;
     }
 
-    function updatePlayerElement(playerId, centers, pos){
+    // update single pawn position (no DB)
+    function updatePlayerElementLocal(playerId, centers, pos){
       const el = document.getElementById(`player-${playerId}`);
       const c = centers[pos];
       if(!c) return;
@@ -213,19 +304,7 @@
       el.style.top = (c.y * 100) + '%';
     }
 
-    function renderPlayersStatus(playerPositions){
-      playersStatus.innerHTML='';
-      for(let i=1;i<=totalPlayers;i++){
-        const d=document.createElement('div'); d.className='player-status';
-        d.innerHTML = `<div style="display:flex;gap:8px;align-items:center"><span style="width:14px;height:14px;border-radius:50%;background:${playerColors[i-1]};display:inline-block;border:2px solid #fff"></span><strong>Tim ${i}</strong></div><div>Petak ${playerPositions[i]||1}</div>`;
-        playersStatus.appendChild(d);
-      }
-    }
-
-    // ---------- DB helpers ----------
-    async function getGameOnce(){ const snap = await get(ref(db,'game')); return snap.exists() ? snap.val() : null; }
-
-    // admin operations
+    // ---------- DB helpers (admin actions write to DB) ----------
     async function adminSetTurn(playerId, numberOfRolls){
       await update(ref(db,'game'), {
         activePlayerId: playerId,
@@ -235,63 +314,117 @@
       });
     }
 
+    // animate sequence and write each step to DB so viewers see movement
+    async function animatePathAndWrite(teamId, pathArray, eventText){
+      // pathArray is array of positions to set sequentially
+      const delay = 300; // ms per step (halus)
+      // read state once
+      const snap = await get(ref(db,'game'));
+      const state = snap.exists() ? snap.val() : {};
+      const positions = state.playerPositions || Object.fromEntries(Array.from({length:totalPlayers},(_,i)=>[i+1,1]));
+
+      for(let i=0;i<pathArray.length;i++){
+        positions[teamId] = pathArray[i];
+        // write incremental position so viewers see it
+        await update(ref(db,'game'), { playerPositions: positions, lastEvent: eventText, updatedAt: Date.now() });
+        // wait
+        await new Promise(res => setTimeout(res, delay));
+      }
+    }
+
+    // adminRollDice will compute landing, then call animatePathAndWrite
     async function adminRollDice(){
       const snap = await get(ref(db,'game'));
       const state = snap.exists() ? snap.val() : {};
       const positions = state.playerPositions || Object.fromEntries(Array.from({length:totalPlayers},(_,i)=>[i+1,1]));
       let active = state.activePlayerId || 1;
       let rollsLeft = state.rollsLeft || 1;
-      if(rollsLeft <= 0) return;
+      if(rollsLeft <= 0) return null;
 
       const r = Math.floor(Math.random()*6)+1;
       let cur = Number(positions[active]) || 1;
-      let next = cur + r;
-      if(next>100) next = 100;
-      positions[active] = next;
+      let landing = cur + r;
+      if(landing > 100) landing = 100;
 
-      let eventText = `Hasil dadu: ${r}`;
-      if(ladders[next]){ positions[active] = ladders[next]; eventText += ` 🪜 Naik ke ${ladders[next]}`; }
-      else if(snakes[next]){ positions[active] = snakes[next]; eventText += ` 🐍 Turun ke ${snakes[next]}`; }
+      // create path from cur+1 .. landing
+      const path = [];
+      for(let s = cur+1; s<=landing; s++) path.push(s);
 
-      // capture
-      const landed = positions[active];
+      // If landing has ladder or snake, we'll animate an extra jump to dest
+      const after = ladders[landing] || snakes[landing] || null;
+
+      // event text will be updated gradually
+      const eventText = `Dadu: ${r}. Tim ${active} dari ${cur} → ${landing}` + (after ? ` → ${after}` : '');
+
+      // animate steps to landing (write each step)
+      if(path.length > 0) await animatePathAndWrite(active, path, `Menggerakkan Tim ${active}...`);
+
+      // if ladder or snake, animate the final climb/drop with interpolated small steps
+      if(after){
+        const extraPath = [];
+        const steps = Math.max(3, Math.min(8, Math.abs(after - landing))); // 3..8 steps
+        for(let i=1;i<=steps;i++){
+          const t = i/steps;
+          const interpolated = Math.round(landing + (after - landing) * t);
+          if(interpolated !== extraPath[extraPath.length-1]) extraPath.push(interpolated);
+        }
+        await animatePathAndWrite(active, extraPath, eventText);
+      }
+
+      // finally write final game state (positions, rollsLeft decreased)
+      const finalSnap = await get(ref(db,'game'));
+      const finalState = finalSnap.exists() ? finalSnap.val() : {};
+      const finalPositions = finalState.playerPositions || positions;
+      finalPositions[active] = after || landing;
+
+      // capture: if someone already on final square, capture them back to 1
       for(let i=1;i<=totalPlayers;i++){
         if(i===Number(active)) continue;
-        if(Number(positions[i]) === Number(landed)){
-          positions[i] = 1;
-          eventText += ` | Tim ${active} capture Tim ${i}`;
+        if(Number(finalPositions[i]) === Number(finalPositions[active])){
+          finalPositions[i] = 1;
         }
       }
 
-      rollsLeft = Math.max(0, rollsLeft - 1);
+      rollsLeft = Math.max(0, (finalState.rollsLeft || rollsLeft) - 1);
 
       await set(ref(db,'game'), {
-        playerPositions: positions,
-        activePlayerId: state.activePlayerId || active,
+        playerPositions: finalPositions,
+        activePlayerId: finalState.activePlayerId || active,
         rollsLeft,
         lastDice: r,
-        lastEvent: eventText,
+        lastEvent: `Hasil dadu: ${r} → Tim ${active} ke ${finalPositions[active]}`,
         updatedAt: Date.now()
       });
+
+      return {dice: r, pos: finalPositions[active], event: `Hasil dadu: ${r} → Tim ${active} ke ${finalPositions[active]}`};
     }
 
-    // manual move: pindahkan satu tim ke petak tertentu
+    // admin manual move (animated)
     async function adminMovePlayer(teamId, targetSquare){
       if(teamId < 1 || teamId > totalPlayers) throw new Error('Tim invalid');
       if(targetSquare < 1 || targetSquare > 100) throw new Error('Petak invalid');
+      // read current position
       const snap = await get(ref(db,'game'));
       const state = snap.exists() ? snap.val() : {};
       const positions = state.playerPositions || Object.fromEntries(Array.from({length:totalPlayers},(_,i)=>[i+1,1]));
-      positions[teamId] = targetSquare;
-      const eventText = `Admin memindah Tim ${teamId} → ${targetSquare}`;
-      await update(ref(db,'game'), {
-        playerPositions: positions,
-        lastEvent: eventText,
-        updatedAt: Date.now()
-      });
+      const cur = Number(positions[teamId]) || 1;
+      // build path
+      const path = [];
+      if(targetSquare > cur){
+        for(let s=cur+1;s<=targetSquare;s++) path.push(s);
+      } else {
+        for(let s=cur-1;s>=targetSquare;s--) path.push(s);
+      }
+      await animatePathAndWrite(teamId, path, `Admin memindah Tim ${teamId} → ${targetSquare}`);
+      // final write
+      const finalSnap = await get(ref(db,'game'));
+      const finalState = finalSnap.exists() ? finalSnap.val() : {};
+      const finalPositions = finalState.playerPositions || positions;
+      finalPositions[teamId] = targetSquare;
+      await update(ref(db,'game'), { playerPositions: finalPositions, lastEvent: `Admin memindah Tim ${teamId} → ${targetSquare}`, updatedAt: Date.now() });
     }
 
-    // reset game (semua data kembali)
+    // reset game
     async function adminResetGame(){
       const defaultPositions = Object.fromEntries(Array.from({length:totalPlayers},(_,i)=>[i+1,1]));
       await set(ref(db,'game'), {
@@ -305,128 +438,194 @@
     }
 
     // ---------- realtime listener ----------
+    let lastSeenDice = null;
     function attachListeners(){
       onValue(ref(db,'game'), (snap)=>{
         const state = snap.exists() ? snap.val() : {};
         const p = state.playerPositions || {};
         const active = state.activePlayerId || null;
         const rollsLeft = state.rollsLeft || 0;
-        diceResult.innerText = state.lastEvent || 'Hasil dadu: -';
-        currentPlayerDisplay.innerText = active ? `Tim ${active}` : 'Tim aktif: -';
-        rollsLeftDisplay.innerText = rollsLeft;
-        requestAnimationFrame(()=>{
-          const centers = computeCellCenters();
-          for(let i=1;i<=totalPlayers;i++){
-            updatePlayerElement(i, centers, Number(p[i]||1));
+        const centers = computeCellCenters();
+        // update pawn positions from DB instantly (so viewers follow)
+        for(let i=1;i<=totalPlayers;i++){
+          updatePlayerElementLocal(i, centers, Number(p[i]||1));
+        }
+        // update dice UI if present
+        if(state.lastDice !== undefined && state.lastDice !== null){
+          diceBox.innerText = state.lastDice;
+          // viewer dice: if dice changed, animate small viewer dice
+          if(lastSeenDice !== state.lastDice){
+            // flash animate viewer dice
+            viewerDice.innerText = '...';
+            viewerDice.style.transform = 'scale(1.05) rotate(15deg)';
+            setTimeout(()=>{ viewerDice.style.transform = ''; viewerDice.innerText = state.lastDice; }, 700);
+            lastSeenDice = state.lastDice;
           }
-        });
-        renderPlayersStatus(p);
+          viewerLast.innerText = `🧮 Dadu: ${state.lastDice}`;
+        } else {
+          viewerLast.innerText = '🧮 Dadu: -';
+        }
+        // update viewer turn + rolls left
+        viewerTurn.innerText = active ? `🎲 Giliran: Tim ${active}` : '🎲 Giliran: -';
+        viewerRolls.innerText = `🔁 Sisa: ${rollsLeft}`;
+        // also update admin card items
+        cfgCurrentPlayer.innerText = active ? `Tim ${active}` : 'Tim aktif: -';
+        diceEvent.innerText = state.lastEvent || 'Hasil dadu: -';
       });
     }
 
-    // ---------- auth handlers ----------
-    btnLogin.addEventListener('click', async ()=>{
-      const email = emailInput.value.trim();
-      const pass = passInput.value;
-      if(!email || !pass){ alert('Isi email & password'); return; }
-      try{
-        await signInWithEmailAndPassword(auth, email, pass);
-      }catch(err){
-        alert('Login gagal: ' + err.message);
-      }
-    });
-    btnLogout.addEventListener('click', async ()=>{ await signOut(auth); });
+    // ---------- UI wiring ----------
+    gearBtn.addEventListener('click', ()=> settingsBackdrop.style.display = 'flex');
+    closeSettings.addEventListener('click', ()=> settingsBackdrop.style.display = 'none');
 
-    onAuthStateChanged(auth, async (user)=>{
-      if(user){
-        userInfo.innerText = `Login: ${user.email}`;
-        emailInput.style.display = 'none';
-        passInput.style.display = 'none';
-        btnLogin.style.display = 'none';
-        btnLogout.style.display = 'inline-block';
-        // enable admin-only UI for whitelisted emails
-        if(ADMIN_EMAILS.includes(user.email)){
-          setTurnBtn.disabled = false;
-          diceBtn.disabled = false;
-          manualSection.style.display = 'block';
-          resetSection.style.display = 'block';
-        } else {
-          setTurnBtn.disabled = true;
-          diceBtn.disabled = true;
-          manualSection.style.display = 'none';
-          resetSection.style.display = 'none';
+    // populate selects and place pawns initially
+    function populateAll(){
+      populateSelects();
+      const centers = computeCellCenters();
+      get(ref(db,'game')).then(snap=>{
+        const state = snap.exists()?snap.val():{};
+        const p = state.playerPositions || {};
+        for(let i=1;i<=totalPlayers;i++){
+          updatePlayerElementLocal(i, centers, Number(p[i]||1));
         }
-      } else {
-        userInfo.innerText = 'Belum login (viewer)';
-        emailInput.style.display = 'block';
-        passInput.style.display = 'block';
-        btnLogin.style.display = 'inline-block';
-        btnLogout.style.display = 'none';
-        setTurnBtn.disabled = true;
-        diceBtn.disabled = true;
-        manualSection.style.display = 'none';
-        resetSection.style.display = 'none';
+        if(state.lastDice !== undefined && state.lastDice !== null) {
+          diceBox.innerText = state.lastDice;
+          viewerDice.innerText = state.lastDice;
+        }
+        cfgCurrentPlayer.innerText = state.activePlayerId ? `Tim ${state.activePlayerId}` : 'Tim aktif: -';
+        diceEvent.innerText = state.lastEvent || 'Hasil dadu: -';
+        viewerTurn.innerText = cfgCurrentPlayer.innerText;
+        viewerRolls.innerText = `🔁 Sisa: ${state.rollsLeft || 0}`;
+        viewerLast.innerText = state.lastDice !== undefined && state.lastDice !== null ? `🧮 Dadu: ${state.lastDice}` : '🧮 Dadu: -';
+      });
+    }
+
+    // dice animation helper for admin card
+    function animateDiceTo(number){
+      diceBox.classList.remove('rolling');
+      void diceBox.offsetWidth;
+      diceBox.classList.add('rolling');
+      diceBox.innerText = '...';
+      setTimeout(()=>{ diceBox.classList.remove('rolling'); diceBox.innerText = number; }, 800);
+    }
+
+    // bind settings buttons
+    cfgSetTurn.addEventListener('click', async ()=>{
+      try{
+        const pid = Number(cfgSelectPlayer.value);
+        const n = Number(cfgInputRolls.value) || 1;
+        await adminSetTurn(pid,n);
+        settingsBackdrop.style.display='none';
+      }catch(err){ alert('Gagal set giliran: '+err.message); }
+    });
+
+    cfgRollDice.addEventListener('click', async ()=>{
+      diceBox.innerText = '';
+      diceBox.classList.add('rolling');
+      try{
+        const res = await adminRollDice();
+        if(res){
+          animateDiceTo(res.dice);
+          diceEvent.innerText = res.event;
+        } else {
+          diceBox.classList.remove('rolling');
+          alert('Tidak ada lemparan tersisa.');
+        }
+      }catch(err){
+        diceBox.classList.remove('rolling');
+        alert('Gagal roll: '+err.message);
       }
     });
 
-    // wire admin buttons
-    setTurnBtn.addEventListener('click', async ()=>{
-      const pid = Number(selectPlayer.value);
-      const n = Number(inputRolls.value) || 1;
-      try{ await adminSetTurn(pid,n); }catch(err){ alert('Gagal set giliran: '+err.message); }
-    });
-    diceBtn.addEventListener('click', async ()=>{
-      try{ await adminRollDice(); }catch(err){ alert('Gagal roll dadu: '+err.message); }
-    });
-
-    btnMove.addEventListener('click', async ()=>{
-      const t = Number(movePlayer.value);
-      const target = Number(moveTarget.value);
+    cfgMoveBtn.addEventListener('click', async ()=>{
+      const t = Number(cfgMovePlayer.value);
+      const target = Number(cfgMoveTarget.value);
       if(!confirm(`Pindahkan Tim ${t} ke petak ${target}?`)) return;
-      try{
-        await adminMovePlayer(t, target);
-        alert('Berhasil memindahkan.');
-      }catch(err){ alert('Gagal memindahkan: '+err.message); }
+      try{ await adminMovePlayer(t, target); alert('Berhasil memindahkan.'); }catch(err){ alert('Gagal memindahkan: '+err.message); }
     });
-    btnMoveCenter.addEventListener('click', async ()=>{
-      const t = Number(movePlayer.value);
+    cfgMoveReset.addEventListener('click', async ()=>{
+      const t = Number(cfgMovePlayer.value);
       if(!confirm(`Kembalikan Tim ${t} ke kotak 1?`)) return;
       try{ await adminMovePlayer(t, 1); alert('Berhasil kembalikan.'); }catch(err){ alert('Gagal: '+err.message); }
     });
 
-    btnReset.addEventListener('click', async ()=>{
-      if(!confirm('Yakin reset seluruh game? (semua posisi akan kembali & riwayat event akan hilang)')) return;
-      try{ await adminResetGame(); alert('Game berhasil di-reset.'); }catch(err){ alert('Gagal reset: '+err.message); }
+    cfgReset.addEventListener('click', async ()=>{
+      if(!confirm('Yakin reset seluruh game? Semua data akan kembali ke awal.')) return;
+      try{ await adminResetGame(); alert('Game berhasil di-reset.'); settingsBackdrop.style.display='none'; }catch(err){ alert('Gagal reset: '+err.message); }
     });
 
-    // ---------- init ----------
-    async function init(){
+    // Logout
+    logoutBtn.addEventListener('click', async ()=>{
+      try{
+        await signOut(auth);
+        // show role modal so user chooses viewer/admin again
+        roleModalBackdrop.style.display = 'flex';
+        document.querySelector('.stage').setAttribute('aria-hidden','true');
+      }catch(err){ alert('Gagal logout: '+err.message); }
+    });
+
+    // ROLE modal actions
+    roleViewer.addEventListener('click', ()=> {
+      roleModalBackdrop.style.display = 'none';
+      document.querySelector('.stage').setAttribute('aria-hidden','false');
+      attachListeners();
+      populateAll();
+    });
+    roleAdmin.addEventListener('click', ()=> adminForm.style.display = 'block');
+    loginCancel.addEventListener('click', ()=> adminForm.style.display = 'none');
+
+    loginBtn.addEventListener('click', async ()=>{
+      const e = loginEmail.value.trim();
+      const p = loginPass.value;
+      if(!e||!p){ alert('Isi email & password'); return; }
+      try{
+        await signInWithEmailAndPassword(auth, e, p);
+      }catch(err){
+        alert('Login gagal: '+err.message);
+      }
+    });
+
+    // auth state handling
+    onAuthStateChanged(auth, user=>{
+      if(user){
+        // admin logged in
+        roleModalBackdrop.style.display = 'none';
+        document.querySelector('.stage').setAttribute('aria-hidden','false');
+        adminEmailEl.innerText = `Admin: ${user.email}`;
+        // show gear & logout only for whitelisted admin
+        if(ADMIN_EMAILS.includes(user.email)){
+          gearBtn.classList.remove('hidden');
+          logoutBtn.style.display = 'block';
+          settingsBackdrop.style.display = 'none';
+        } else {
+          gearBtn.classList.add('hidden');
+          logoutBtn.style.display = 'none';
+        }
+        populateAll();
+        attachListeners();
+      } else {
+        // not logged in -> show role modal and keep it clickable
+        gearBtn.classList.add('hidden');
+        logoutBtn.style.display = 'none';
+        roleModalBackdrop.style.display = 'flex';
+        document.querySelector('.stage').setAttribute('aria-hidden','true');
+      }
+    });
+
+    // init
+    function init(){
       createGridCells();
       createPlayers();
       populateSelects();
-      attachListeners();
-
-      // If DB empty, initialize only when admin logged in
-      const s = await getGameOnce();
-      if(!s){
-        onAuthStateChanged(auth, async (user)=>{
-          if(user && ADMIN_EMAILS.includes(user.email)){
-            const defaultPositions = Object.fromEntries(Array.from({length:totalPlayers},(_,i)=>[i+1,1]));
-            await set(ref(db,'game'), {
-              playerPositions: defaultPositions,
-              activePlayerId: null,
-              rollsLeft: 0,
-              lastEvent: 'Game diinisialisasi',
-              updatedAt: Date.now()
-            });
-          }
-        });
-      }
-
-      // reposition on resize
-      window.addEventListener('resize', ()=>{ requestAnimationFrame(()=>{ const centers = computeCellCenters(); getGameOnce().then(state => { const p = (state && state.playerPositions) || {}; for(let i=1;i<=totalPlayers;i++){ updatePlayerElement(i, centers, Number(p[i]||1)); } }) })});
+      // show role modal on start
+      roleModalBackdrop.style.display = 'flex';
+      document.querySelector('.stage').setAttribute('aria-hidden','true');
     }
     init();
+
+    // reposition pawns on resize (keeps them where DB says)
+    window.addEventListener('resize', ()=>{ requestAnimationFrame(()=>{ get(ref(db,'game')).then(snap => { const state = snap.exists()?snap.val():{}; const p = state.playerPositions || {}; const centers = computeCellCenters(); for(let i=1;i<=totalPlayers;i++){ updatePlayerElementLocal(i, centers, Number(p[i]||1)); } }); })});
+
   </script>
 </body>
 </html>

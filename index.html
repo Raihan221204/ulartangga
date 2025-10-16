@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf--8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Ular Tangga - Multi-Admin Event (Dengan Sistem Kunci)</title>
+  <title>Ular Tangga - Multi-Admin Event (Aturan Finish Pas)</title>
   <style>
     :root{--board-gap:12px}
     html,body{height:100%;margin:0;overflow:hidden}
@@ -175,7 +175,7 @@
     const db = getDatabase(app);
 
     const totalPlayers = 16;
-    const ladders = {2:38,7:14,15:26,28:84,21:42,36:44,51:67,71:91,78:98,87:94,8:31};
+    const ladders = {2:38,7:14,15:26,28:84,21:42,36:44,51:67,71:91,78:98,87:94};
     const snakes  = {16:6,49:11,46:25,62:19,64:60,74:53,89:68,92:88,95:75,99:80};
     const playerColors = ['#FF5733','#33FF57','#3357FF','#FF33A1','#A133FF','#33FFA1','#FFC300','#C70039','#900C3F','#581845','#00FFFF','#FF00FF','#0000FF','#00FF00','#FFFF00','#000000'];
 
@@ -241,19 +241,41 @@
       const gameSnap = await get(ref(db, 'game'));
       const positions = gameSnap.val().playerPositions || Object.fromEntries(Array.from({ length: totalPlayers }, (_, i) => [i + 1, 1]));
       const r = Math.floor(Math.random() * 6) + 1;
-      let cur = Number(positions[teamId]) || 1;
-      let landing = cur + r;
-      if (landing > 100) landing = 100;
-      const after = ladders[landing] || snakes[landing] || null;
-      const finalPos = after || landing;
-      const eventText = `Tim ${teamId} dapat dadu ${r} → bergerak ke ${finalPos}`;
+      const cur = Number(positions[teamId]) || 1;
       
+      // [MODIFIKASI] Logika baru untuk menang harus pas (bounce back)
+      const potentialLanding = cur + r;
+      let landing;
+      let finalPos;
+      let after = null;
+      let eventText;
+      const path = [];
+
+      if (potentialLanding > 100) {
+        landing = 100 - (potentialLanding - 100);
+        finalPos = landing;
+        eventText = `Tim ${teamId} dapat dadu ${r} → 100 → mundur ke ${finalPos}`;
+      } else {
+        landing = potentialLanding;
+        after = ladders[landing] || snakes[landing] || null;
+        finalPos = after || landing;
+        if (after) {
+          eventText = `Tim ${teamId} dapat dadu ${r} → ${landing} → ${finalPos}`;
+        } else {
+          eventText = `Tim ${teamId} dapat dadu ${r} → ${finalPos}`;
+        }
+      }
+
       animateDiceTo(r); // Animasikan dadu di UI admin yang mengklik
-      
       await update(ref(db, 'game'), { lastDice: r, lastEvent: `Menggerakkan Tim ${teamId}...` });
       
-      const path = [];
-      for (let s = cur + 1; s <= landing; s++) path.push(s);
+      // [MODIFIKASI] Membuat jalur animasi untuk bounce back
+      if (potentialLanding > 100) {
+        for (let s = cur + 1; s <= 100; s++) path.push(s);
+        for (let s = 99; s >= landing; s--) path.push(s);
+      } else {
+        for (let s = cur + 1; s <= landing; s++) path.push(s);
+      }
       
       if (path.length > 0) await animatePathAndWrite(teamId, path);
       if (after) await animatePathAndWrite(teamId, [after]);
@@ -272,9 +294,9 @@
       runTransaction(gameRef, (gameData) => {
         if (gameData) {
           if (gameData.isBusy) {
-            return; // Batalkan jika sibuk
+            return; 
           }
-          gameData.isBusy = true; // Kunci game
+          gameData.isBusy = true;
         }
         return gameData;
       }).then(async (result) => {
@@ -290,7 +312,6 @@
           } catch (err) {
             alert('Terjadi kesalahan: ' + err.message);
           } finally {
-            // Selalu buka kunci setelah selesai
             await update(gameRef, { isBusy: false });
             directRollBtn.disabled = false;
             directRollBtn.innerText = 'Kocok Dadu & Gerakkan Tim';
@@ -298,7 +319,7 @@
         }
       }).catch((error) => {
         console.error("Transaction failed: ", error);
-        update(gameRef, { isBusy: false }); // Buka kunci jika transaksi gagal total
+        update(gameRef, { isBusy: false });
         directRollBtn.disabled = false;
         directRollBtn.innerText = 'Kocok Dadu & Gerakkan Tim';
       });

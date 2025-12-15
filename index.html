@@ -185,14 +185,23 @@
     import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
     import { getDatabase, ref, set, onValue, update, get, runTransaction } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
-    const app = initializeApp(firebaseConfig);
+   const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getDatabase(app);
 
-    const totalPlayers = 16;
+    // --- UBAH BAGIAN INI ---
+    const totalPlayers = 19; // Ganti 16 menjadi 19
     const ladders = {2:38,7:14,15:26,28:84,21:42,36:44,51:67,71:91,78:98,87:94,8:31};
     const snakes  = {16:6,49:11,46:25,62:19,64:60,74:53,89:68,92:88,95:75,99:80};
-    const playerColors = ['#FF5733','#33FF57','#3357FF','#FF33A1','#A133FF','#33FFA1','#FFC300','#C70039','#900C3F','#581845','#00FFFF','#FF00FF','#0000FF','#00FF00','#FFFF00','#000000'];
+    
+    // Tambahkan 3 warna baru di paling belakang array ini
+    const playerColors = [
+        '#FF5733','#33FF57','#3357FF','#FF33A1','#A133FF','#33FFA1',
+        '#FFC300','#C70039','#900C3F','#581845','#00FFFF','#FF00FF',
+        '#0000FF','#00FF00','#FFFF00','#000000',
+        '#808080', '#8B4513', '#008080' // <-- Warna untuk Tim 17, 18, 19
+    ];
+    // -----------------------
 
     const gearBtn = document.getElementById('gearBtn');
     const logoutBtn = document.getElementById('logoutBtn');
